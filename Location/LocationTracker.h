@@ -10,7 +10,7 @@
 #import <CoreLocation/CoreLocation.h>
 #import "LocationShareModel.h"
 
-@interface LocationTracker : NSObject <CLLocationManagerDelegate>
+@interface LocationTracker : NSObject <CLLocationManagerDelegate, UIAlertViewDelegate>
 
 @property (nonatomic) CLLocationCoordinate2D myLastLocation;
 @property (nonatomic) CLLocationAccuracy myLastLocationAccuracy;
@@ -19,6 +19,8 @@
 
 @property (nonatomic) CLLocationCoordinate2D myLocation;
 @property (nonatomic) CLLocationAccuracy myLocationAccuracy;
+
+@property (nonatomic, strong) NSMutableArray *alertArray;
 
 + (CLLocationManager *)sharedLocationManager;
 

@@ -14,6 +14,10 @@
 
 #define IS_OS_8_OR_LATER ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0)
 
+#define locationManagerLifeTime 5
+#define DelayToStartJob 10
+#define IntervalToSubmitLocationToServer 20
+
 @implementation LocationTracker
 
 + (CLLocationManager *)sharedLocationManager {
@@ -33,7 +37,7 @@
         //Get the share model and also initialize myLocationArray
         self.shareModel = [LocationShareModel sharedModel];
         self.shareModel.myLocationArray = [[NSMutableArray alloc]init];
-        
+        self.alertArray = [[NSMutableArray alloc] init];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
 	}
 	return self;
@@ -162,7 +166,7 @@
     [self.shareModel.bgTask beginNewBackgroundTask];
     
     //Restart the locationMaanger after 1 minute
-    self.shareModel.timer = [NSTimer scheduledTimerWithTimeInterval:60 target:self
+    self.shareModel.timer = [NSTimer scheduledTimerWithTimeInterval:DelayToStartJob target:self
                                                            selector:@selector(restartLocationUpdates)
                                                            userInfo:nil
                                                             repeats:NO];
@@ -174,7 +178,7 @@
         self.shareModel.delay10Seconds = nil;
     }
     
-    self.shareModel.delay10Seconds = [NSTimer scheduledTimerWithTimeInterval:10 target:self
+    self.shareModel.delay10Seconds = [NSTimer scheduledTimerWithTimeInterval:locationManagerLifeTime target:self
                                                     selector:@selector(stopLocationDelayBy10Seconds)
                                                     userInfo:nil
                                                      repeats:NO];
@@ -187,25 +191,28 @@
     CLLocationManager *locationManager = [LocationTracker sharedLocationManager];
     [locationManager stopUpdatingLocation];
     
-    NSLog(@"locationManager stop Updating after 10 seconds");
+    NSLog(@"locationManager stop Updating after %d seconds",locationManagerLifeTime);
 }
 
 
 - (void)locationManager: (CLLocationManager *)manager didFailWithError: (NSError *)error
 {
-   // NSLog(@"locationManager error:%@",error);
+    NSLog(@"locationManager error:%@",error);
     
     switch([error code])
     {
         case kCLErrorNetwork: // general, network-related error
         {
-            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Network Error" message:@"Please check your network connection." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Network Error" message:@"Please check your network connection." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
             [alert show];
         }
             break;
         case kCLErrorDenied:{
-            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Enable Location Service" message:@"You have to enable the Location Service to use this App. To enable, please go to Settings->Privacy->Location Services" delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil];
-            [alert show];
+            if(self.alertArray.count < 1){
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Enable Location Service" message:@"You have to enable the Location Service to use this App. To enable, please go to Settings->Privacy->Location Services" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Open Setting", nil];
+                [self.alertArray addObject:alert];
+                [alert show];
+            }
         }
             break;
         default:
@@ -213,6 +220,18 @@
             
         }
             break;
+    }
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    [self.alertArray removeObject:alertView];
+    
+    if(buttonIndex == 1){
+        if(&UIApplicationOpenSettingsURLString != nil)
+        {
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+        }        
     }
 }
 
